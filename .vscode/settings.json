@@ -1,0 +1,16 @@
+{
+  "json.schemaDownload.enable": true,
+  "json.schemas": [
+    {
+      "fileMatch": ["deno.json", "deno.jsonc"],
+      "url": "https://deno.land/x/deno/cli/schemas/config-file.v1.json"
+    }
+  ],
+  "deno.enable": true,
+  "deno.lint": true,
+  "editor.defaultFormatter": "denoland.vscode-deno",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.deno": "explicit"
+  }
+}

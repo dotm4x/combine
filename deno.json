@@ -1,0 +1,35 @@
+{
+  "name": "@stonebogus/combine",
+  "description": "Architectural interface framework with modular rendering drivers",
+  "version": "1.0.0",
+  "exports": "./source/index.ts",
+  "publish": {
+    "include": [
+      "source/**/*.ts",
+      "deno.json",
+      "README.md",
+      "LICENSE"
+    ]
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": false,
+    "singleQuote": true,
+    "proseWrap": "always"
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"],
+      "include": ["ban-untagged-todo"],
+      "exclude": ["require-await"]
+    },
+    "include": ["source/", "tests/"],
+    "exclude": ["dist/", "coverage/"]
+  },
+  "tasks": {
+    "run": "deno run source/main.ts",
+    "quality-check": "deno fmt --check && deno lint && deno check && deno test -a"
+  }
+}
