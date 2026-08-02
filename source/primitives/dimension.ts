@@ -46,4 +46,8 @@ export const Dimension = {
   equals(a: Dimension, b: Dimension): boolean {
     return a.scale === b.scale && a.offset === b.offset
   },
+
+  toString(dimension: Dimension): string {
+    return `Dimension(scale: ${dimension.scale}, offset: ${dimension.offset})`
+  },
 }

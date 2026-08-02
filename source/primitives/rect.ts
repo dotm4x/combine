@@ -65,4 +65,8 @@ export const Rect = {
       a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
     )
   },
+
+  toString(rect: Rect): string {
+    return `Rect(x: ${rect.x}, y: ${rect.y}, w: ${rect.width}, h: ${rect.height})`
+  },
 }

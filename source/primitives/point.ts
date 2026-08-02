@@ -42,4 +42,8 @@ export const Point = {
   equals(a: Point, b: Point): boolean {
     return a.x === b.x && a.y === b.y
   },
+
+  toString(point: Point): string {
+    return `Point(x: ${point.x}, y: ${point.y})`
+  },
 }

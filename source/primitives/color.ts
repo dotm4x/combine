@@ -101,4 +101,8 @@ export const Color = {
   equals(a: Color, b: Color): boolean {
     return a.red === b.red && a.green === b.green && a.blue === b.blue
   },
+
+  toString(color: Color): string {
+    return `Color(r: ${color.red}, g: ${color.green}, b: ${color.blue})`
+  },
 }

@@ -38,4 +38,8 @@ export const Rotation = {
   equals(a: Rotation, b: Rotation): boolean {
     return a.degrees === b.degrees
   },
+
+  toString(rotation: Rotation): string {
+    return `Rotation(${rotation.degrees}°)`
+  },
 }

@@ -41,4 +41,10 @@ export const Vector = {
   equals(a: Vector, b: Vector): boolean {
     return Dimension.equals(a.x, b.x) && Dimension.equals(a.y, b.y)
   },
+
+  toString(vector: Vector): string {
+    return `Vector(x: ${Dimension.toString(vector.x)}, y: ${
+      Dimension.toString(vector.y)
+    })`
+  },
 }
