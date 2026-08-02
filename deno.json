@@ -29,7 +29,7 @@
       "exclude": ["require-await", "no-this-alias"]
     },
     "include": ["source/", "tests/"],
-    "exclude": ["dist/", "coverage/"]
+    "exclude": ["playground", "coverage/"]
   },
   "tasks": {
     "run": "deno run source/main.ts",
