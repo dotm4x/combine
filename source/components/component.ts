@@ -1,9 +1,8 @@
 import { Identifiable } from '../interfaces/identifiable.ts'
 import { Registry } from '../utilities/registry.ts'
 import { OnlyConnectableSignal, Signal } from '../utilities/signal.ts'
-import { Toggle } from '../utilities/toggle.ts'
-import { Behavior } from './behaviors/behavior.ts'
-import { Style } from './styles/style.ts'
+import { Trait } from './traits/trait.ts'
+import { Visual } from './visuals/visual.ts'
 import { Vector } from '../primitives/vector.ts'
 import { Dimension } from '../primitives/dimension.ts'
 import { Application } from '../application.ts'
@@ -13,7 +12,7 @@ import { Store } from '../utilities/store.ts'
 
 export interface ComponentSettings {
   parent?: Component
-  visible?: boolean
+  enabled?: boolean
   position?: Vector
   rotation?: Rotation
   size?: Vector
@@ -22,14 +21,14 @@ export interface ComponentSettings {
   index?: number
   tags?: string[]
   parts?: Component[]
-  styles?: Style[]
-  behaviors?: Behavior[]
+  visuals?: Visual[]
+  traits?: Trait[]
 }
 
 export class Component implements Identifiable {
   public readonly id = crypto.randomUUID()
   private _parent?: Component | Application
-  public readonly visible: Toggle
+  public readonly enabled: Store<boolean>
   public readonly position: Store<Vector>
   public readonly rotation: Store<Rotation>
   public readonly size: Store<Vector>
@@ -50,23 +49,23 @@ export class Component implements Identifiable {
     },
   })
 
-  public styles: Registry<Style> = new Registry({
-    onAdd: (style) => {
-      style.parent = this
+  public visuals: Registry<Visual> = new Registry({
+    onAdd: (visual) => {
+      visual.parent = this
     },
-    onRemove: (style) => {
-      style.revert()
-      style.parent = undefined
+    onRemove: (visual) => {
+      visual.revert()
+      visual.parent = undefined
     },
   })
 
-  public behaviors: Registry<Behavior> = new Registry({
-    onAdd: (behavior) => {
-      behavior.parent = this
+  public traits: Registry<Trait> = new Registry({
+    onAdd: (trait) => {
+      trait.parent = this
     },
-    onRemove: (behavior) => {
-      behavior.detach()
-      behavior.parent = undefined
+    onRemove: (trait) => {
+      trait.detach()
+      trait.parent = undefined
     },
   })
 
@@ -82,7 +81,7 @@ export class Component implements Identifiable {
 
   public constructor(settings: ComponentSettings = {}) {
     this.parent = settings.parent
-    this.visible = new Toggle(settings.visible ?? true)
+    this.enabled = new Store(settings.enabled ?? true)
     this.position = new Store(
       settings.position ?? Vector.new(Dimension.new(), Dimension.new()),
       Vector.equals,
@@ -110,12 +109,12 @@ export class Component implements Identifiable {
       this.parts.register(component)
     }
 
-    for (const style of settings.styles ?? []) {
-      this.styles.register(style)
+    for (const visual of settings.visuals ?? []) {
+      this.visuals.register(visual)
     }
 
-    for (const behavior of settings.behaviors ?? []) {
-      this.behaviors.register(behavior)
+    for (const trait of settings.traits ?? []) {
+      this.traits.register(trait)
     }
 
     if (this._parent instanceof Component) {
@@ -166,12 +165,12 @@ export class Component implements Identifiable {
       )
     }
 
-    for (const behavior of this.behaviors.all()) {
-      behavior.attach()
+    for (const trait of this.traits.all()) {
+      trait.attach()
     }
 
-    for (const style of this.styles.all()) {
-      style.apply()
+    for (const visual of this.visuals.all()) {
+      visual.apply()
     }
 
     for (const part of this.parts.all()) {
