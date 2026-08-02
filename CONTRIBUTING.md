@@ -1,9 +1,9 @@
-# Contributing to Quark
+# Contributing to Combine
 
-Welcome to the **Quark** development ecosystem! We are building a
-high-performance, multiparadigm language, and we appreciate your interest in
-contributing. To maintain the high quality and maintainability of our codebase,
-please adhere to the following standards.
+Welcome to the **Combine** development ecosystem! We are building a
+high-performance, platform-agnostic interface framework, and we appreciate your
+interest in contributing. To maintain the high quality and maintainability of
+our codebase, please adhere to the following standards.
 
 ## Core Development Philosophy
 
@@ -65,7 +65,7 @@ descriptive and follow this pattern:
 - `test`: For adding missing tests or correcting existing tests.
 - `chore`: For maintenance tasks or updating build tools.
 
-- **Example:** `add: New validation logic for the class constructor`
+- **Example:** `feat: New validation logic for the class constructor`
 - **Avoid:** One-word messages or vague descriptions like "fix," "update," or
   "wip."
 
