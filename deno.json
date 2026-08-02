@@ -11,6 +11,9 @@
       "LICENSE"
     ]
   },
+  "compilerOptions": {
+    "lib": ["deno.window", "dom", "dom.iterable"]
+  },
   "fmt": {
     "useTabs": false,
     "lineWidth": 80,
@@ -23,7 +26,7 @@
     "rules": {
       "tags": ["recommended"],
       "include": ["ban-untagged-todo"],
-      "exclude": ["require-await"]
+      "exclude": ["require-await", "no-this-alias"]
     },
     "include": ["source/", "tests/"],
     "exclude": ["dist/", "coverage/"]
@@ -31,5 +34,8 @@
   "tasks": {
     "run": "deno run source/main.ts",
     "quality-check": "deno fmt --check && deno lint && deno check && deno test -a"
+  },
+  "imports": {
+    "csstype": "npm:csstype@^3.2.3"
   }
 }
