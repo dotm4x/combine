@@ -94,4 +94,4 @@ descriptive and follow this pattern:
 
 ---
 
-Thank you for helping us keep **Quark** clean and professional.
+Thank you for helping us keep **Combine** clean and professional.
