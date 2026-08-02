@@ -36,6 +36,7 @@
     "quality-check": "deno fmt --check && deno lint && deno check && deno test -a"
   },
   "imports": {
+    "@preact/signals-core": "npm:@preact/signals-core@^1.14.4",
     "csstype": "npm:csstype@^3.2.3"
   }
 }
