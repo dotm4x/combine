@@ -12,5 +12,11 @@
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.deno": "explicit"
+  },
+  "material-icon-theme.folders.associations": {
+    "primitives": "functions",
+    "styles": "theme",
+    "behaviors": "middleware",
+    "composers": "element"
   }
 }
