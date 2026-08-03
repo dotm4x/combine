@@ -161,6 +161,12 @@ export abstract class Component<ElementType = unknown>
   public abstract compose(): Generator<Component<ElementType>, void, unknown>
 
   public build(): void {
+    if (this._destroyed) {
+      throw new Error(
+        `Component with id "${this.id}" is destroyed, cannot build`,
+      )
+    }
+
     if (this._built) {
       throw new Error(
         `Component with id ${this.id} is already built, cannot build`,

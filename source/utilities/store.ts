@@ -98,6 +98,7 @@ export class Store<ValueType>
     if (this._destroyed) {
       throw new Error('Store is destroyed, cannot clear')
     }
+
     for (const listener of this._listeners) {
       if (force || !listener.persistent) {
         listener.disconnect()
@@ -113,6 +114,7 @@ export class Store<ValueType>
     for (const listener of this._listeners) {
       listener.disconnect()
     }
+
     this._listeners.clear()
 
     this._destroyed = true

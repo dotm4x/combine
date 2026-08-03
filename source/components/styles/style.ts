@@ -42,6 +42,10 @@ export abstract class Style<ElementType = unknown> implements Destroyable {
     return this._parent
   }
   public set parent(value: Component<ElementType> | undefined) {
+    if (this._destroyed) {
+      throw new Error('Style is destroyed, cannot set parent')
+    }
+
     if (this._parent === value) return
 
     const oldParent = this._parent
@@ -59,6 +63,8 @@ export abstract class Style<ElementType = unknown> implements Destroyable {
   }
 
   public apply(): void {
+    if (this._destroyed) throw new Error('Style is destroyed, cannot revert')
+
     if (!this._parent) {
       throw new Error('Style has not parent, cannot apply')
     }
@@ -76,6 +82,8 @@ export abstract class Style<ElementType = unknown> implements Destroyable {
   }
 
   public revert(): void {
+    if (this._destroyed) throw new Error('Style is destroyed, cannot revert')
+
     if (!this._parent) {
       throw new Error('Style has not parent, cannot revert')
     }

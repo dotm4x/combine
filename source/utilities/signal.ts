@@ -56,6 +56,7 @@ export class Signal<Payload extends unknown[] = []>
     if (this._destroyed) {
       throw new Error('Signal is destroyed, cannot fire')
     }
+
     for (const listener of this._listeners) {
       try {
         listener.callback(...payload)
@@ -70,6 +71,7 @@ export class Signal<Payload extends unknown[] = []>
     if (this._destroyed) {
       throw new Error('Signal is destroyed, cannot clear')
     }
+
     for (const listener of this._listeners) {
       if (force || !listener.persistent) {
         listener.disconnect()

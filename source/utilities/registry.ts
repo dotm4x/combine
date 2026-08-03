@@ -79,6 +79,7 @@ export class Registry<ItemType> implements Destroyable {
     if (this.destroyed) {
       throw new Error('Registry is destroyed, cannot register, item')
     }
+
     if (!this.registerable) {
       throw new Error(
         'Registry is not able to register items, cannot register, item',
@@ -102,16 +103,19 @@ export class Registry<ItemType> implements Destroyable {
     if (this.destroyed) {
       throw new Error('Registry is destroyed, cannot remove, item')
     }
+
     if (!this.removable) {
       throw new Error(
         'Registry is not able to remove items, cannot remove item',
       )
     }
+
     if (!this._items.has(item)) {
       throw new Error(
         'Item is not added or does not exists, cannot remove item',
       )
     }
+
     this._onRemove(item)
     this._items.delete(item)
     this._onRemoved.fire(item)
@@ -121,9 +125,11 @@ export class Registry<ItemType> implements Destroyable {
     if (this.destroyed) {
       throw new Error('Registry is destroyed, cannot clear')
     }
+
     if (!this.clearable) {
       throw new Error('Registry is not able to be cleared, cannot clear')
     }
+
     for (const item of Array.from(this._items)) {
       this.remove(item)
     }

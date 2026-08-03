@@ -35,6 +35,10 @@ export abstract class Behavior<ElementType = unknown> implements Destroyable {
   }
 
   public set parent(value: Component<ElementType> | undefined) {
+    if (this._destroyed) {
+      throw new Error('Behavior is destroyed, cannot set parent')
+    }
+
     if (this._parent === value) return
 
     const oldParent = this._parent
@@ -60,6 +64,8 @@ export abstract class Behavior<ElementType = unknown> implements Destroyable {
   }
 
   public attach(): void {
+    if (this._destroyed) throw new Error('Behavior is destroyed, cannot attach')
+
     if (!this._parent) {
       throw new Error('Behavior has no parent, cannot attach')
     }
@@ -77,6 +83,8 @@ export abstract class Behavior<ElementType = unknown> implements Destroyable {
   }
 
   public detach(): void {
+    if (this._destroyed) throw new Error('Behavior is destroyed, cannot detach')
+
     if (!this._attached) return
 
     this._onDetach.fire()

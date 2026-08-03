@@ -77,16 +77,19 @@ export class Collection<ItemType extends Identifiable> implements Destroyable {
     if (this.destroyed) {
       throw new Error('Collection is destroyed, cannot insert item')
     }
+
     if (!this.insertable) {
       throw new Error(
         'Collection is not able to insert items, cannot insert item',
       )
     }
+
     if (this._items.has(item.id)) {
       throw new Error(
         `Item with id ${item.id} is already inserted, cannot insert`,
       )
     }
+
     this._onAdd(item)
     this._items.set(item.id, item)
     this._onAdded.fire(item)
@@ -96,16 +99,19 @@ export class Collection<ItemType extends Identifiable> implements Destroyable {
     if (this.destroyed) {
       throw new Error('Collection is destroyed, cannot remove item')
     }
+
     if (!this.removable) {
       throw new Error(
         'Collection is not able to remove items, cannot remove item',
       )
     }
+
     if (!this._items.has(item.id)) {
       throw new Error(
         `Item with id ${item.id} is not inserted or doesn't exist, cannot remove item`,
       )
     }
+
     this._onRemove(item)
     this._items.delete(item.id)
     this._onRemoved.fire(item)
@@ -115,9 +121,11 @@ export class Collection<ItemType extends Identifiable> implements Destroyable {
     if (this.destroyed) {
       throw new Error('Collection is destroyed, cannot clear')
     }
+
     if (!this.clearable) {
       throw new Error('Collection is not able to be cleared, cannot clear')
     }
+
     for (const item of this._items.values()) {
       this.remove(item)
     }
