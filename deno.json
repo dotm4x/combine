@@ -1,5 +1,5 @@
 {
-  "name": "@stonebogus/combine",
+  "name": "@dotm4x/combine",
   "description": "Architectural interface framework with modular rendering drivers",
   "version": "1.0.0",
   "exports": "./source/index.ts",
