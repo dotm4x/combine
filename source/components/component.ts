@@ -3,15 +3,17 @@ import { Registry } from '../utilities/registry.ts'
 import { OnlyConnectableSignal, Signal } from '../utilities/signal.ts'
 import { Vector } from '../primitives/vector.ts'
 import { Dimension } from '../primitives/dimension.ts'
-import { Application } from '../application.ts'
 import { Rotation } from '../primitives/rotation.ts'
 import { Point } from '../primitives/point.ts'
 import { Store } from '../utilities/store.ts'
 import { Style } from './styles/index.ts'
 import { Behavior } from './behaviors/behavior.ts'
+import { Collection } from '../utilities/collection.ts'
+import { Destroyable } from '../interfaces/destroyable.ts'
 
-export interface ComponentSettings<ElementType> {
+export interface ComponentSettings<ElementType = unknown> {
   parent?: Component<ElementType>
+  id?: string
   enabled?: boolean
   position?: Vector
   rotation?: Rotation
@@ -20,14 +22,14 @@ export interface ComponentSettings<ElementType> {
   anchor?: Point
   index?: number
   tags?: string[]
-  parts?: Component<ElementType>[]
-  styles?: Style<ElementType>[]
   behaviors?: Behavior<ElementType>[]
+  styles?: Style<ElementType>[]
 }
 
-export class Component<ElementType = unknown> implements Identifiable {
-  public readonly id = crypto.randomUUID()
-  private _parent?: Component<ElementType> | Application
+export abstract class Component<ElementType = unknown>
+  implements Identifiable, Destroyable {
+  private _parent?: Component<ElementType>
+  public readonly id: string
   public readonly enabled: Store<boolean>
   public readonly position: Store<Vector>
   public readonly rotation: Store<Rotation>
@@ -38,9 +40,11 @@ export class Component<ElementType = unknown> implements Identifiable {
 
   public readonly tags: Set<string> = new Set()
 
-  private _loaded = false
+  private _built = false
   private _element: ElementType | undefined
-  public parts: Registry<Component<ElementType>> = new Registry({
+  private _destroyed = false
+
+  public parts: Collection<Component<ElementType>> = new Collection({
     onAdd: (component) => {
       if (component.parent !== this) component.parent = this
     },
@@ -70,18 +74,19 @@ export class Component<ElementType = unknown> implements Identifiable {
   })
 
   private _onParentChanged: Signal<
-    [Component<ElementType> | Application | undefined]
+    [Component<ElementType> | undefined]
   > = new Signal()
   public onParentChanged: OnlyConnectableSignal<
-    [Component<ElementType> | Application | undefined]
+    [Component<ElementType> | undefined]
   > = this
     ._onParentChanged
     .contract()
-  private _onLoad: Signal = new Signal()
-  public onLoad: OnlyConnectableSignal = this._onLoad.contract()
+  private _onBuild: Signal = new Signal()
+  public onBuild: OnlyConnectableSignal = this._onBuild.contract()
 
   public constructor(settings: ComponentSettings<ElementType> = {}) {
     this.parent = settings.parent
+    this.id = settings.id ?? crypto.randomUUID()
     this.enabled = new Store(settings.enabled ?? true)
     this.position = new Store(
       settings.position ?? Vector.new(Dimension.new(), Dimension.new()),
@@ -106,42 +111,38 @@ export class Component<ElementType = unknown> implements Identifiable {
       this.tags.add(tag)
     }
 
-    for (const component of settings.parts ?? []) {
-      this.parts.register(component)
+    for (const behavior of settings.behaviors ?? []) {
+      this.behaviors.register(behavior)
     }
 
     for (const style of settings.styles ?? []) {
       this.styles.register(style)
     }
 
-    for (const behavior of settings.behaviors ?? []) {
-      this.behaviors.register(behavior)
-    }
-
     if (this._parent instanceof Component) {
-      this._parent.parts.register(this)
+      this._parent.parts.insert(this)
     }
   }
 
-  public get parent(): Component<ElementType> | Application | undefined {
+  public get parent(): Component<ElementType> | undefined {
     return this._parent
   }
 
-  public set parent(value: Component<ElementType> | Application | undefined) {
+  public set parent(value: Component<ElementType> | undefined) {
     if (this._parent === value) return
 
     const oldParent = this._parent
     this._parent = value
 
-    if (oldParent instanceof Component && oldParent.parts.has(this)) {
+    if (oldParent instanceof Component && oldParent.parts.has(this.id)) {
       oldParent.parts.remove(this)
     }
 
     this._onParentChanged.fire(value)
   }
 
-  public get loaded(): boolean {
-    return this._loaded
+  public get built(): boolean {
+    return this._built
   }
 
   public get element(): ElementType | undefined {
@@ -153,17 +154,21 @@ export class Component<ElementType = unknown> implements Identifiable {
     this._element = value
   }
 
-  public load(): void {
-    if (this._loaded) {
+  public get destroyed(): boolean {
+    return this._destroyed
+  }
+
+  public abstract compose(): Generator<Component<ElementType>, void, unknown>
+
+  public build(): void {
+    if (this._built) {
       throw new Error(
-        `Component with id ${this.id} is already loaded, cannot load`,
+        `Component with id ${this.id} is already built, cannot build`,
       )
     }
 
-    if (!this.element) {
-      throw new Error(
-        `Component with id ${this.id} has no element assigned, cannot load`,
-      )
+    for (const part of this.compose()) {
+      this.parts.insert(part)
     }
 
     for (const behavior of this.behaviors.all()) {
@@ -175,10 +180,101 @@ export class Component<ElementType = unknown> implements Identifiable {
     }
 
     for (const part of this.parts.all()) {
-      part.load()
+      part.build()
     }
 
-    this._loaded = true
-    this._onLoad.fire()
+    this._onBuild.fire()
+    this._built = true
+  }
+
+  public dump(
+    depth: number = 0,
+    last: boolean = true,
+    prefix: string = '',
+    maxDepth: number = Infinity,
+  ): void {
+    const colors = {
+      reset: '\x1b[0m',
+      dim: '\x1b[2m',
+      blue: '\x1b[34m',
+      green: '\x1b[32m',
+      yellow: '\x1b[33m',
+      cyan: '\x1b[36m',
+    }
+
+    const connector = last ? '└── ' : '├── '
+    const newPrefix = prefix + (last ? '    ' : '│   ')
+
+    const id = `${colors.dim}(id: ${this.id.slice(0, 8)})${colors.reset}`
+    const tag = this.tags.size > 0
+      ? ` ${colors.yellow}[${Array.from(this.tags).join(', ')}]${colors.reset}`
+      : ''
+    const color = this.constructor.name === 'Panel' ? colors.blue : colors.green
+
+    console.log(
+      `${prefix}${
+        depth === 0 ? '' : connector
+      }${color}${this.constructor.name}${colors.reset}${id}${tag}`,
+    )
+
+    if (depth >= maxDepth) {
+      if (this.parts.size() > 0) {
+        console.log(
+          `${newPrefix}${colors.dim}... (max depth reached)${colors.reset}`,
+        )
+      }
+      return
+    }
+
+    const parts = this.parts.all()
+
+    if (parts.length === 0) {
+      console.log(`${newPrefix}${colors.dim}(no parts)${colors.reset}`)
+    } else {
+      parts.forEach((part, index) => {
+        const isLastPart = index === parts.length - 1
+        part.dump(depth + 1, isLastPart, newPrefix, maxDepth)
+      })
+    }
+  }
+
+  public destroy(): void {
+    if (this._destroyed) {
+      throw new Error(
+        `Component with id "${this.id}" is already destroyed, cannot destroy again`,
+      )
+    }
+
+    this.enabled.value = false
+
+    for (const part of this.parts.all()) {
+      part.destroy()
+    }
+    this.parts.destroy()
+
+    for (const behavior of this.behaviors.all()) {
+      behavior.destroy()
+    }
+    this.behaviors.destroy()
+
+    for (const style of this.styles.all()) {
+      style.destroy()
+    }
+    this.styles.destroy()
+
+    this.enabled.destroy()
+    this.position.destroy()
+    this.rotation.destroy()
+    this.size.destroy()
+    this.ratio.destroy()
+    this.anchor.destroy()
+    this.index.destroy()
+
+    this._element = undefined
+
+    this._onParentChanged.destroy()
+    this._onBuild.destroy()
+
+    this._destroyed = true
   }
 }
