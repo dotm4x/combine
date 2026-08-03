@@ -1,14 +1,14 @@
 import { OnlyConnectableSignal, Signal } from './signal.ts'
 import { Identifiable } from '../interfaces/identifiable.ts'
-import { Disposable } from '../interfaces/disposable.ts'
+import { Destroyable } from '../interfaces/destroyable.ts'
 
 export interface ReadOnlyCollection<Type> {
   readonly insertable: boolean
-  readonly removible: boolean
+  readonly removable: boolean
   readonly clearable: boolean
   readonly onAdded: OnlyConnectableSignal<[Type]>
   readonly onRemoved: OnlyConnectableSignal<[Type]>
-  readonly disposed: boolean
+  readonly destroyed: boolean
   get(id: string): Type | undefined
   has(id: string): boolean
   size(): number
@@ -17,15 +17,15 @@ export interface ReadOnlyCollection<Type> {
   find(predicate: (item: Type) => boolean): Type | undefined
 }
 
-export class Collection<ItemType extends Identifiable> implements Disposable {
+export class Collection<ItemType extends Identifiable> implements Destroyable {
   public readonly insertable: boolean
-  public readonly removible: boolean
+  public readonly removable: boolean
   public readonly clearable: boolean
   private _onAdd: (item: ItemType) => void = () => {}
   private _onRemove: (item: ItemType) => void = () => {}
 
   private _items: Map<string, ItemType> = new Map()
-  private _disposed: boolean = false
+  private _destroyed: boolean = false
 
   private readonly _onAdded: Signal<[ItemType]> = new Signal()
   public readonly onAdded: OnlyConnectableSignal<[ItemType]> = this._onAdded
@@ -37,13 +37,13 @@ export class Collection<ItemType extends Identifiable> implements Disposable {
   public constructor(settings: {
     items?: ItemType[]
     insertable?: boolean
-    removible?: boolean
+    removable?: boolean
     clearable?: boolean
     onAdd?: (item: ItemType) => void
     onRemove?: (item: ItemType) => void
   } = {}) {
     this.insertable = settings.insertable ?? true
-    this.removible = settings.removible ?? true
+    this.removable = settings.removable ?? true
     this.clearable = settings.clearable ?? true
     if (settings.onAdd) this._onAdd = settings.onAdd
     if (settings.onRemove) this._onRemove = settings.onRemove
@@ -55,11 +55,11 @@ export class Collection<ItemType extends Identifiable> implements Disposable {
   public asReadOnly(): ReadOnlyCollection<ItemType> {
     return {
       insertable: this.insertable,
-      removible: this.removible,
+      removable: this.removable,
       clearable: this.clearable,
       onAdded: this.onAdded,
       onRemoved: this.onRemoved,
-      disposed: this._disposed,
+      destroyed: this._destroyed,
       get: (id: string) => this.get(id),
       has: (id: string) => this.has(id),
       size: () => this.size(),
@@ -69,16 +69,18 @@ export class Collection<ItemType extends Identifiable> implements Disposable {
     }
   }
 
-  public get disposed(): boolean {
-    return this._disposed
+  public get destroyed(): boolean {
+    return this._destroyed
   }
 
   public insert(item: ItemType): void {
-    if (this.disposed) {
-      throw new Error('Collection is disposed, cannot insert')
+    if (this.destroyed) {
+      throw new Error('Collection is destroyed, cannot insert item')
     }
     if (!this.insertable) {
-      throw new Error('Collection is not able to insert items, cannot insert')
+      throw new Error(
+        'Collection is not able to insert items, cannot insert item',
+      )
     }
     if (this._items.has(item.id)) {
       throw new Error(
@@ -91,15 +93,17 @@ export class Collection<ItemType extends Identifiable> implements Disposable {
   }
 
   public remove(item: ItemType): void {
-    if (this.disposed) {
-      throw new Error('Collection is disposed, cannot remove')
+    if (this.destroyed) {
+      throw new Error('Collection is destroyed, cannot remove item')
     }
-    if (!this.removible) {
-      throw new Error('Collection is not able to remove items, cannot remove')
+    if (!this.removable) {
+      throw new Error(
+        'Collection is not able to remove items, cannot remove item',
+      )
     }
     if (!this._items.has(item.id)) {
       throw new Error(
-        `Item with id ${item.id} is not inserted or doesn't exist, cannot remove`,
+        `Item with id ${item.id} is not inserted or doesn't exist, cannot remove item`,
       )
     }
     this._onRemove(item)
@@ -108,8 +112,8 @@ export class Collection<ItemType extends Identifiable> implements Disposable {
   }
 
   public clear(): void {
-    if (this.disposed) {
-      throw new Error('Collection is disposed, cannot clear')
+    if (this.destroyed) {
+      throw new Error('Collection is destroyed, cannot clear')
     }
     if (!this.clearable) {
       throw new Error('Collection is not able to be cleared, cannot clear')
@@ -143,10 +147,16 @@ export class Collection<ItemType extends Identifiable> implements Disposable {
     return this.all().find(predicate)
   }
 
-  public dispose(): void {
+  public destroy(): void {
+    if (this._destroyed) {
+      throw new Error('Collection is already destroyed, cannot destroy again')
+    }
+
     this._items.clear()
-    this._onAdded.dispose()
-    this._onRemoved.dispose()
-    this._disposed = true
+
+    this._onAdded.destroy()
+    this._onRemoved.destroy()
+
+    this._destroyed = true
   }
 }
