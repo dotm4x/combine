@@ -18,5 +18,9 @@
     "styles": "theme",
     "behaviors": "middleware",
     "composers": "element"
-  }
+  },
+  "cSpell.words": [
+    "insertable",
+    "dotm4x"
+  ]
 }
