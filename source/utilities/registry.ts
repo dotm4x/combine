@@ -1,14 +1,14 @@
 import { OnlyConnectableSignal, Signal } from './signal.ts'
-import { Disposable } from '../interfaces/disposable.ts'
+import { Destroyable } from '../interfaces/destroyable.ts'
 
 export interface ReadOnlyRegistry<ItemType> {
   readonly registerable: boolean
-  readonly removible: boolean
+  readonly removable: boolean
   readonly clearable: boolean
   readonly limit?: number
   readonly onAdded: OnlyConnectableSignal<[ItemType]>
   readonly onRemoved: OnlyConnectableSignal<[ItemType]>
-  readonly disposed: boolean
+  readonly destroyed: boolean
   has(item: ItemType): boolean
   size(): number
   all(): ItemType[]
@@ -16,16 +16,16 @@ export interface ReadOnlyRegistry<ItemType> {
   find(predicate: (item: ItemType) => boolean): ItemType | undefined
 }
 
-export class Registry<ItemType> implements Disposable {
+export class Registry<ItemType> implements Destroyable {
   public readonly registerable: boolean
-  public readonly removible: boolean
+  public readonly removable: boolean
   public readonly clearable: boolean
   public readonly limit?: number
   private _onAdd: (item: ItemType) => void = () => {}
   private _onRemove: (item: ItemType) => void = () => {}
 
   private _items: Set<ItemType> = new Set()
-  private _disposed: boolean = false
+  private _destroyed: boolean = false
 
   private readonly _onAdded: Signal<[ItemType]> = new Signal()
   public readonly onAdded: OnlyConnectableSignal<[ItemType]> = this._onAdded
@@ -37,14 +37,14 @@ export class Registry<ItemType> implements Disposable {
   public constructor(settings: {
     items?: ItemType[]
     registerable?: boolean
-    removible?: boolean
+    removable?: boolean
     clearable?: boolean
     limit?: number
     onAdd?: (item: ItemType) => void
     onRemove?: (item: ItemType) => void
   } = {}) {
     this.registerable = settings.registerable ?? true
-    this.removible = settings.removible ?? true
+    this.removable = settings.removable ?? true
     this.clearable = settings.clearable ?? true
     this.limit = settings.limit
     if (settings.onAdd) this._onAdd = settings.onAdd
@@ -57,12 +57,12 @@ export class Registry<ItemType> implements Disposable {
   public asReadOnly(): ReadOnlyRegistry<ItemType> {
     return {
       registerable: this.registerable,
-      removible: this.removible,
+      removable: this.removable,
       clearable: this.clearable,
       limit: this.limit,
       onAdded: this.onAdded,
       onRemoved: this.onRemoved,
-      disposed: this._disposed,
+      destroyed: this._destroyed,
       has: (item: ItemType) => this.has(item),
       size: () => this.size(),
       all: () => this.all(),
@@ -71,16 +71,18 @@ export class Registry<ItemType> implements Disposable {
     }
   }
 
-  public get disposed(): boolean {
-    return this._disposed
+  public get destroyed(): boolean {
+    return this._destroyed
   }
 
   public register(item: ItemType): void {
-    if (this.disposed) {
-      throw new Error('Registry is disposed, cannot register')
+    if (this.destroyed) {
+      throw new Error('Registry is destroyed, cannot register, item')
     }
     if (!this.registerable) {
-      throw new Error('Registry is not able to register items, cannot register')
+      throw new Error(
+        'Registry is not able to register items, cannot register, item',
+      )
     }
     if (this.limit !== undefined && this._items.size >= this.limit) {
       const target = this._items.values().next().value
@@ -89,7 +91,7 @@ export class Registry<ItemType> implements Disposable {
       }
     }
     if (this._items.has(item)) {
-      throw new Error('Item is already registered, cannot register')
+      throw new Error('Item is already registered, cannot register, item')
     }
     this._onAdd(item)
     this._items.add(item)
@@ -97,14 +99,18 @@ export class Registry<ItemType> implements Disposable {
   }
 
   public remove(item: ItemType): void {
-    if (this.disposed) {
-      throw new Error('Registry is disposed, cannot remove')
+    if (this.destroyed) {
+      throw new Error('Registry is destroyed, cannot remove, item')
     }
-    if (!this.removible) {
-      throw new Error('Registry is not able to remove items, cannot remove')
+    if (!this.removable) {
+      throw new Error(
+        'Registry is not able to remove items, cannot remove item',
+      )
     }
     if (!this._items.has(item)) {
-      throw new Error('Item is not added or does not exists, cannot remove')
+      throw new Error(
+        'Item is not added or does not exists, cannot remove item',
+      )
     }
     this._onRemove(item)
     this._items.delete(item)
@@ -112,8 +118,8 @@ export class Registry<ItemType> implements Disposable {
   }
 
   public clear(): void {
-    if (this.disposed) {
-      throw new Error('Registry is disposed, cannot clear')
+    if (this.destroyed) {
+      throw new Error('Registry is destroyed, cannot clear')
     }
     if (!this.clearable) {
       throw new Error('Registry is not able to be cleared, cannot clear')
@@ -143,9 +149,16 @@ export class Registry<ItemType> implements Disposable {
     return this.all().find(predicate)
   }
 
-  public dispose(): void {
+  public destroy(): void {
+    if (this._destroyed) {
+      throw new Error('Registry is already destroyed, cannot destroy again')
+    }
+
     this._items.clear()
-    this._onAdded.dispose()
-    this._onRemoved.dispose()
+
+    this._onAdded.destroy()
+    this._onRemoved.destroy()
+
+    this._destroyed = true
   }
 }
