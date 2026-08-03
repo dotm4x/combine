@@ -1,3 +1,4 @@
+import { Destroyable } from '../../interfaces/destroyable.ts'
 import { OnlyConnectableSignal, Signal } from '../../utilities/signal.ts'
 import { Component } from '../component.ts'
 
@@ -5,17 +6,15 @@ export interface BehaviorSettings<ElementType = unknown> {
   parent?: Component<ElementType>
 }
 
-export abstract class Behavior<ElementType = unknown> {
+export abstract class Behavior<ElementType = unknown> implements Destroyable {
   private _parent?: Component<ElementType>
-
   private _attached = false
+  private _destroyed = false
 
   private _onAttach: Signal = new Signal()
-  public onAttach: OnlyConnectableSignal = this._onAttach
-    .contract()
+  public onAttach: OnlyConnectableSignal = this._onAttach.contract()
   private _onDetach: Signal = new Signal()
-  public onDetach: OnlyConnectableSignal = this._onDetach
-    .contract()
+  public onDetach: OnlyConnectableSignal = this._onDetach.contract()
   protected _onPropertyChanged: Signal<[string, unknown]> = new Signal()
   public onPropertyChanged: OnlyConnectableSignal<[string, unknown]> = this
     ._onPropertyChanged.contract()
@@ -34,6 +33,7 @@ export abstract class Behavior<ElementType = unknown> {
   public get parent(): Component<ElementType> | undefined {
     return this._parent
   }
+
   public set parent(value: Component<ElementType> | undefined) {
     if (this._parent === value) return
 
@@ -51,17 +51,25 @@ export abstract class Behavior<ElementType = unknown> {
     this._onParentChanged.fire(value)
   }
 
+  public get attached(): boolean {
+    return this._attached
+  }
+
+  public get destroyed(): boolean {
+    return this._destroyed
+  }
+
   public attach(): void {
     if (!this._parent) {
-      throw new Error('Behavior has not parent, cannot apply')
+      throw new Error('Behavior has no parent, cannot attach')
     }
 
     if (this._attached) {
-      throw new Error('Behavior is already attached, cannot apply ')
+      throw new Error('Behavior is already attached, cannot attach')
     }
 
     if (!this._parent.element) {
-      throw new Error("Behavior's parent has not element, cannot apply")
+      throw new Error("Behavior's parent has no element, cannot attach")
     }
 
     this._onAttach.fire()
@@ -69,15 +77,26 @@ export abstract class Behavior<ElementType = unknown> {
   }
 
   public detach(): void {
-    if (!this._parent) {
-      throw new Error('Behavior has not parent, cannot revert')
-    }
-
-    if (!this._attached) {
-      throw new Error('Behavior is not attached, cannot revert')
-    }
+    if (!this._attached) return
 
     this._onDetach.fire()
     this._attached = false
+  }
+
+  public destroy(): void {
+    if (this._destroyed) {
+      throw new Error('Behavior is already destroyed, cannot destroy again')
+    }
+
+    if (this._attached) this.detach()
+
+    this.parent = undefined
+
+    this._onAttach.destroy()
+    this._onDetach.destroy()
+    this._onPropertyChanged.destroy()
+    this._onParentChanged.destroy()
+
+    this._destroyed = true
   }
 }
