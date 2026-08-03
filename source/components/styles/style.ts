@@ -1,3 +1,4 @@
+import { Destroyable } from '../../interfaces/destroyable.ts'
 import { OnlyConnectableSignal, Signal } from '../../utilities/signal.ts'
 import { Component } from '../component.ts'
 
@@ -5,10 +6,11 @@ export interface StyleSettings<ElementType = unknown> {
   parent?: Component<ElementType>
 }
 
-export abstract class Style<ElementType = unknown> {
+export abstract class Style<ElementType = unknown> implements Destroyable {
   private _parent?: Component<ElementType>
 
   private _applied = false
+  private _destroyed = false
 
   private _onApply: Signal = new Signal()
   public onApply: OnlyConnectableSignal = this._onApply
@@ -16,9 +18,6 @@ export abstract class Style<ElementType = unknown> {
   private _onRevert: Signal = new Signal()
   public onRevert: OnlyConnectableSignal = this._onRevert
     .contract()
-  protected _onPropertyChanged: Signal<[string, unknown]> = new Signal()
-  public onPropertyChanged: OnlyConnectableSignal<[string, unknown]> = this
-    ._onPropertyChanged.contract()
   private _onParentChanged: Signal<[Component<ElementType> | undefined]> =
     new Signal()
   public onParentChanged: OnlyConnectableSignal<
@@ -29,6 +28,14 @@ export abstract class Style<ElementType = unknown> {
 
   public constructor(settings: StyleSettings<ElementType> = {}) {
     this._parent = settings.parent
+  }
+
+  public get applied(): boolean {
+    return this._applied
+  }
+
+  public get destroyed(): boolean {
+    return this._destroyed
   }
 
   public get parent(): Component<ElementType> | undefined {
@@ -79,5 +86,21 @@ export abstract class Style<ElementType = unknown> {
 
     this._onRevert.fire()
     this._applied = false
+  }
+
+  public destroy(): void {
+    if (this._destroyed) {
+      throw new Error('Style is already destroyed, cannot destroy again')
+    }
+
+    if (this._applied) this.revert()
+
+    this.parent = undefined
+
+    this._onParentChanged.destroy()
+    this._onApply.destroy()
+    this._onRevert.destroy()
+
+    this._destroyed = true
   }
 }
