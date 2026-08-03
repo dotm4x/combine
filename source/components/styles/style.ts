@@ -1,12 +1,12 @@
 import { OnlyConnectableSignal, Signal } from '../../utilities/signal.ts'
 import { Component } from '../component.ts'
 
-export interface VisualSettings {
-  parent?: Component
+export interface StyleSettings<ElementType = unknown> {
+  parent?: Component<ElementType>
 }
 
-export abstract class Visual {
-  private _parent?: Component
+export abstract class Style<ElementType = unknown> {
+  private _parent?: Component<ElementType>
 
   private _applied = false
 
@@ -19,31 +19,34 @@ export abstract class Visual {
   protected _onPropertyChanged: Signal<[string, unknown]> = new Signal()
   public onPropertyChanged: OnlyConnectableSignal<[string, unknown]> = this
     ._onPropertyChanged.contract()
-  private _onParentChanged: Signal<[Component | undefined]> = new Signal()
-  public onParentChanged: OnlyConnectableSignal<[Component | undefined]> = this
+  private _onParentChanged: Signal<[Component<ElementType> | undefined]> =
+    new Signal()
+  public onParentChanged: OnlyConnectableSignal<
+    [Component<ElementType> | undefined]
+  > = this
     ._onParentChanged
     .contract()
 
-  public constructor(settings: VisualSettings = {}) {
+  public constructor(settings: StyleSettings<ElementType> = {}) {
     this._parent = settings.parent
   }
 
-  public get parent(): Component | undefined {
+  public get parent(): Component<ElementType> | undefined {
     return this._parent
   }
-  public set parent(value: Component | undefined) {
+  public set parent(value: Component<ElementType> | undefined) {
     if (this._parent === value) return
 
     const oldParent = this._parent
 
-    if (oldParent && oldParent.visuals.has(this)) {
-      oldParent.visuals.remove(this)
+    if (oldParent && oldParent.styles.has(this)) {
+      oldParent.styles.remove(this)
     }
 
     this._parent = value
 
-    if (this._parent && !this._parent.visuals.has(this)) {
-      this._parent.visuals.register(this)
+    if (this._parent && !this._parent.styles.has(this)) {
+      this._parent.styles.register(this)
     }
     this._onParentChanged.fire(value)
   }
@@ -54,11 +57,11 @@ export abstract class Visual {
     }
 
     if (this._applied) {
-      throw new Error('Visual is already applied, cannot apply ')
+      throw new Error('Style is already applied, cannot apply ')
     }
 
     if (!this._parent.element) {
-      throw new Error("Visual's parent has not element, cannot apply")
+      throw new Error("Style's parent has not element, cannot apply")
     }
 
     this._onApply.fire()
@@ -67,11 +70,11 @@ export abstract class Visual {
 
   public revert(): void {
     if (!this._parent) {
-      throw new Error('Visual has not parent, cannot revert')
+      throw new Error('Style has not parent, cannot revert')
     }
 
     if (!this._applied) {
-      throw new Error('Visual is not applied, cannot revert')
+      throw new Error('Style is not applied, cannot revert')
     }
 
     this._onRevert.fire()

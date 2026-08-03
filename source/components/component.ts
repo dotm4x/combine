@@ -1,17 +1,17 @@
 import { Identifiable } from '../interfaces/identifiable.ts'
 import { Registry } from '../utilities/registry.ts'
 import { OnlyConnectableSignal, Signal } from '../utilities/signal.ts'
-import { Trait } from './traits/trait.ts'
-import { Visual } from './visuals/visual.ts'
 import { Vector } from '../primitives/vector.ts'
 import { Dimension } from '../primitives/dimension.ts'
 import { Application } from '../application.ts'
 import { Rotation } from '../primitives/rotation.ts'
 import { Point } from '../primitives/point.ts'
 import { Store } from '../utilities/store.ts'
+import { Style } from './styles/index.ts'
+import { Behavior } from './behaviors/behavior.ts'
 
-export interface ComponentSettings {
-  parent?: Component
+export interface ComponentSettings<ElementType> {
+  parent?: Component<ElementType>
   enabled?: boolean
   position?: Vector
   rotation?: Rotation
@@ -20,14 +20,14 @@ export interface ComponentSettings {
   anchor?: Point
   index?: number
   tags?: string[]
-  parts?: Component[]
-  visuals?: Visual[]
-  traits?: Trait[]
+  parts?: Component<ElementType>[]
+  styles?: Style<ElementType>[]
+  behaviors?: Behavior<ElementType>[]
 }
 
-export class Component implements Identifiable {
+export class Component<ElementType = unknown> implements Identifiable {
   public readonly id = crypto.randomUUID()
-  private _parent?: Component | Application
+  private _parent?: Component<ElementType> | Application
   public readonly enabled: Store<boolean>
   public readonly position: Store<Vector>
   public readonly rotation: Store<Rotation>
@@ -39,8 +39,8 @@ export class Component implements Identifiable {
   public readonly tags: Set<string> = new Set()
 
   private _loaded = false
-  private _element: HTMLElement | undefined
-  public parts: Registry<Component> = new Registry({
+  private _element: ElementType | undefined
+  public parts: Registry<Component<ElementType>> = new Registry({
     onAdd: (component) => {
       if (component.parent !== this) component.parent = this
     },
@@ -49,37 +49,38 @@ export class Component implements Identifiable {
     },
   })
 
-  public visuals: Registry<Visual> = new Registry({
-    onAdd: (visual) => {
-      visual.parent = this
+  public behaviors: Registry<Behavior<ElementType>> = new Registry({
+    onAdd: (behavior) => {
+      behavior.parent = this
     },
-    onRemove: (visual) => {
-      visual.revert()
-      visual.parent = undefined
-    },
-  })
-
-  public traits: Registry<Trait> = new Registry({
-    onAdd: (trait) => {
-      trait.parent = this
-    },
-    onRemove: (trait) => {
-      trait.detach()
-      trait.parent = undefined
+    onRemove: (behavior) => {
+      behavior.detach()
+      behavior.parent = undefined
     },
   })
 
-  private _onParentChanged: Signal<[Component | Application | undefined]> =
-    new Signal()
+  public styles: Registry<Style<ElementType>> = new Registry({
+    onAdd: (style) => {
+      style.parent = this
+    },
+    onRemove: (style) => {
+      style.revert()
+      style.parent = undefined
+    },
+  })
+
+  private _onParentChanged: Signal<
+    [Component<ElementType> | Application | undefined]
+  > = new Signal()
   public onParentChanged: OnlyConnectableSignal<
-    [Component | Application | undefined]
+    [Component<ElementType> | Application | undefined]
   > = this
     ._onParentChanged
     .contract()
   private _onLoad: Signal = new Signal()
   public onLoad: OnlyConnectableSignal = this._onLoad.contract()
 
-  public constructor(settings: ComponentSettings = {}) {
+  public constructor(settings: ComponentSettings<ElementType> = {}) {
     this.parent = settings.parent
     this.enabled = new Store(settings.enabled ?? true)
     this.position = new Store(
@@ -109,12 +110,12 @@ export class Component implements Identifiable {
       this.parts.register(component)
     }
 
-    for (const visual of settings.visuals ?? []) {
-      this.visuals.register(visual)
+    for (const style of settings.styles ?? []) {
+      this.styles.register(style)
     }
 
-    for (const trait of settings.traits ?? []) {
-      this.traits.register(trait)
+    for (const behavior of settings.behaviors ?? []) {
+      this.behaviors.register(behavior)
     }
 
     if (this._parent instanceof Component) {
@@ -122,11 +123,11 @@ export class Component implements Identifiable {
     }
   }
 
-  public get parent(): Component | Application | undefined {
+  public get parent(): Component<ElementType> | Application | undefined {
     return this._parent
   }
 
-  public set parent(value: Component | undefined) {
+  public set parent(value: Component<ElementType> | Application | undefined) {
     if (this._parent === value) return
 
     const oldParent = this._parent
@@ -143,11 +144,11 @@ export class Component implements Identifiable {
     return this._loaded
   }
 
-  public get element(): HTMLElement | undefined {
+  public get element(): ElementType | undefined {
     return this._element
   }
 
-  public set element(value: HTMLElement) {
+  public set element(value: ElementType) {
     if (this._element === value) return
     this._element = value
   }
@@ -165,12 +166,12 @@ export class Component implements Identifiable {
       )
     }
 
-    for (const trait of this.traits.all()) {
-      trait.attach()
+    for (const behavior of this.behaviors.all()) {
+      behavior.attach()
     }
 
-    for (const visual of this.visuals.all()) {
-      visual.apply()
+    for (const style of this.styles.all()) {
+      style.apply()
     }
 
     for (const part of this.parts.all()) {

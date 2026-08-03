@@ -1,3 +1,3 @@
-export * from './visuals/index.ts'
-export * from './traits/index.ts'
+export * from './behaviors/index.ts'
+export * from './styles/index.ts'
 export * from './component.ts'
