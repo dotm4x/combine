@@ -2,12 +2,12 @@ import { Destroyable } from '../../interfaces/destroyable.ts'
 import { OnlyConnectableSignal, Signal } from '../../utilities/signal.ts'
 import { Component } from '../component.ts'
 
-export interface BehaviorSettings<ElementType = unknown> {
-  parent?: Component<ElementType>
+export interface BehaviorSettings {
+  parent?: Component
 }
 
-export abstract class Behavior<ElementType = unknown> implements Destroyable {
-  private _parent?: Component<ElementType>
+export abstract class Behavior implements Destroyable {
+  private _parent?: Component
   private _attached = false
   private _destroyed = false
 
@@ -18,23 +18,20 @@ export abstract class Behavior<ElementType = unknown> implements Destroyable {
   protected _onPropertyChanged: Signal<[string, unknown]> = new Signal()
   public onPropertyChanged: OnlyConnectableSignal<[string, unknown]> = this
     ._onPropertyChanged.contract()
-  private _onParentChanged: Signal<[Component<ElementType> | undefined]> =
-    new Signal()
-  public onParentChanged: OnlyConnectableSignal<
-    [Component<ElementType> | undefined]
-  > = this
+  private _onParentChanged: Signal<[Component | undefined]> = new Signal()
+  public onParentChanged: OnlyConnectableSignal<[Component | undefined]> = this
     ._onParentChanged
     .contract()
 
-  public constructor(settings: BehaviorSettings<ElementType> = {}) {
+  public constructor(settings: BehaviorSettings = {}) {
     this._parent = settings.parent
   }
 
-  public get parent(): Component<ElementType> | undefined {
+  public get parent(): Component | undefined {
     return this._parent
   }
 
-  public set parent(value: Component<ElementType> | undefined) {
+  public set parent(value: Component | undefined) {
     if (this._destroyed) {
       throw new Error('Behavior is destroyed, cannot set parent')
     }

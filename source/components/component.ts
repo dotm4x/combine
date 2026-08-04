@@ -11,8 +11,8 @@ import { Behavior } from './behaviors/behavior.ts'
 import { Collection } from '../utilities/collection.ts'
 import { Destroyable } from '../interfaces/destroyable.ts'
 
-export interface ComponentSettings<ElementType = unknown> {
-  parent?: Component<ElementType>
+export interface ComponentSettings {
+  parent?: Component
   id?: string
   enabled?: boolean
   position?: Vector
@@ -22,13 +22,12 @@ export interface ComponentSettings<ElementType = unknown> {
   anchor?: Point
   index?: number
   tags?: string[]
-  behaviors?: Behavior<ElementType>[]
-  styles?: Style<ElementType>[]
+  behaviors?: Behavior[]
+  styles?: Style[]
 }
 
-export abstract class Component<ElementType = unknown>
-  implements Identifiable, Destroyable {
-  private _parent?: Component<ElementType>
+export abstract class Component implements Identifiable, Destroyable {
+  private _parent?: Component
   public readonly id: string
   public readonly enabled: Store<boolean>
   public readonly position: Store<Vector>
@@ -41,19 +40,20 @@ export abstract class Component<ElementType = unknown>
   public readonly tags: Set<string> = new Set()
 
   private _built = false
-  private _element: ElementType | undefined
+  private _element: HTMLElement | undefined
   private _destroyed = false
 
-  public parts: Collection<Component<ElementType>> = new Collection({
+  public parts: Collection<Component> = new Collection({
     onAdd: (component) => {
       if (component.parent !== this) component.parent = this
+      if (this._built) component.build()
     },
     onRemove: (component) => {
       if (component.parent === this) component.parent = undefined
     },
   })
 
-  public behaviors: Registry<Behavior<ElementType>> = new Registry({
+  public behaviors: Registry<Behavior> = new Registry({
     onAdd: (behavior) => {
       behavior.parent = this
     },
@@ -63,7 +63,7 @@ export abstract class Component<ElementType = unknown>
     },
   })
 
-  public styles: Registry<Style<ElementType>> = new Registry({
+  public styles: Registry<Style> = new Registry({
     onAdd: (style) => {
       style.parent = this
     },
@@ -73,18 +73,14 @@ export abstract class Component<ElementType = unknown>
     },
   })
 
-  private _onParentChanged: Signal<
-    [Component<ElementType> | undefined]
-  > = new Signal()
-  public onParentChanged: OnlyConnectableSignal<
-    [Component<ElementType> | undefined]
-  > = this
+  private _onParentChanged: Signal<[Component | undefined]> = new Signal()
+  public onParentChanged: OnlyConnectableSignal<[Component | undefined]> = this
     ._onParentChanged
     .contract()
   private _onBuild: Signal = new Signal()
   public onBuild: OnlyConnectableSignal = this._onBuild.contract()
 
-  public constructor(settings: ComponentSettings<ElementType> = {}) {
+  public constructor(settings: ComponentSettings = {}) {
     this.parent = settings.parent
     this.id = settings.id ?? crypto.randomUUID()
     this.enabled = new Store(settings.enabled ?? true)
@@ -124,11 +120,11 @@ export abstract class Component<ElementType = unknown>
     }
   }
 
-  public get parent(): Component<ElementType> | undefined {
+  public get parent(): Component | undefined {
     return this._parent
   }
 
-  public set parent(value: Component<ElementType> | undefined) {
+  public set parent(value: Component | undefined) {
     if (this._parent === value) return
 
     const oldParent = this._parent
@@ -145,11 +141,11 @@ export abstract class Component<ElementType = unknown>
     return this._built
   }
 
-  public get element(): ElementType | undefined {
+  public get element(): HTMLElement | undefined {
     return this._element
   }
 
-  public set element(value: ElementType) {
+  public set element(value: HTMLElement) {
     if (this._element === value) return
     this._element = value
   }
@@ -158,7 +154,21 @@ export abstract class Component<ElementType = unknown>
     return this._destroyed
   }
 
-  public abstract compose(): Generator<Component<ElementType>, void, unknown>
+  public with(item: Component): this
+  public with(item: Behavior): this
+  public with(item: Style): this
+  public with(item: Component | Behavior | Style): this {
+    if (item instanceof Component) {
+      this.parts.insert(item)
+    } else if (item instanceof Behavior) {
+      this.behaviors.register(item)
+    } else if (item instanceof Style) {
+      this.styles.register(item)
+    }
+    return this
+  }
+
+  public abstract compose(): Generator<Component, void, unknown>
 
   public build(): void {
     if (this._destroyed) {
