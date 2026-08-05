@@ -16,8 +16,8 @@
   "material-icon-theme.folders.associations": {
     "primitives": "functions",
     "styles": "theme",
-    "behaviors": "middleware",
-    "composers": "element"
+    "behaviors": "controller",
+    "builders": "element"
   },
   "cSpell.words": [
     "insertable",
