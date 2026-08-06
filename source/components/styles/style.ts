@@ -1,6 +1,6 @@
 import { Destroyable } from '../../interfaces/destroyable.ts'
 import { OnlyConnectableSignal, Signal } from '../../utilities/signal.ts'
-import { Component } from '../component.ts'
+import { Component, ComponentNode } from '../component.ts'
 
 export interface StyleSettings {
   parent?: Component
@@ -11,9 +11,10 @@ export abstract class Style implements Destroyable {
 
   private _applied = false
   private _destroyed = false
+  private _node?: ComponentNode
 
-  private _onApply: Signal = new Signal()
-  public onApply: OnlyConnectableSignal = this._onApply
+  private _onApply: Signal<[ComponentNode]> = new Signal()
+  public onApply: OnlyConnectableSignal<[ComponentNode]> = this._onApply
     .contract()
   private _onRevert: Signal = new Signal()
   public onRevert: OnlyConnectableSignal = this._onRevert
@@ -59,7 +60,7 @@ export abstract class Style implements Destroyable {
     this._onParentChanged.fire(value)
   }
 
-  public apply(): void {
+  public apply(node: ComponentNode): void {
     if (this._destroyed) throw new Error('Style is destroyed, cannot revert')
 
     if (!this._parent) {
@@ -74,7 +75,9 @@ export abstract class Style implements Destroyable {
       throw new Error("Style's parent has not element, cannot apply")
     }
 
-    this._onApply.fire()
+    this._node = node
+
+    this._onApply.fire(node)
     this._applied = true
   }
 
