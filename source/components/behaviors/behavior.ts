@@ -1,6 +1,6 @@
 import { Destroyable } from '../../interfaces/destroyable.ts'
 import { OnlyConnectableSignal, Signal } from '../../utilities/signal.ts'
-import { Component } from '../component.ts'
+import { Component, ComponentNode } from '../component.ts'
 
 export interface BehaviorSettings {
   parent?: Component
@@ -8,13 +8,17 @@ export interface BehaviorSettings {
 
 export abstract class Behavior implements Destroyable {
   private _parent?: Component
+
   private _attached = false
   private _destroyed = false
+  private _node?: ComponentNode
 
-  private _onAttach: Signal = new Signal()
-  public onAttach: OnlyConnectableSignal = this._onAttach.contract()
+  private _onAttach: Signal<[ComponentNode]> = new Signal()
+  public onAttach: OnlyConnectableSignal<[ComponentNode]> = this._onAttach
+    .contract()
   private _onDetach: Signal = new Signal()
-  public onDetach: OnlyConnectableSignal = this._onDetach.contract()
+  public onDetach: OnlyConnectableSignal = this._onDetach
+    .contract()
   protected _onPropertyChanged: Signal<[string, unknown]> = new Signal()
   public onPropertyChanged: OnlyConnectableSignal<[string, unknown]> = this
     ._onPropertyChanged.contract()
@@ -60,7 +64,7 @@ export abstract class Behavior implements Destroyable {
     return this._destroyed
   }
 
-  public attach(): void {
+  public attach(node: ComponentNode): void {
     if (this._destroyed) throw new Error('Behavior is destroyed, cannot attach')
 
     if (!this._parent) {
@@ -75,7 +79,9 @@ export abstract class Behavior implements Destroyable {
       throw new Error("Behavior's parent has no element, cannot attach")
     }
 
-    this._onAttach.fire()
+    this._node = node
+
+    this._onAttach.fire(node)
     this._attached = true
   }
 
