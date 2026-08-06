@@ -10,6 +10,17 @@ import { Style } from './styles/index.ts'
 import { Behavior } from './behaviors/behavior.ts'
 import { Collection } from '../utilities/collection.ts'
 import { Destroyable } from '../interfaces/destroyable.ts'
+import * as CSS from 'csstype'
+
+export interface ComponentNode {
+  add(node: ComponentNode): void
+  remove(node: ComponentNode): void
+  setStyle<K extends keyof CSS.Properties>(
+    property: K,
+    value: CSS.Properties[K],
+  ): void
+  parent?: ComponentNode
+}
 
 export interface ComponentSettings {
   parent?: Component
@@ -40,13 +51,12 @@ export abstract class Component implements Identifiable, Destroyable {
   public readonly tags: Set<string> = new Set()
 
   private _built = false
-  private _element: HTMLElement | undefined
+  private _element: ComponentNode | undefined
   private _destroyed = false
 
   public parts: Collection<Component> = new Collection({
     onAdd: (component) => {
       if (component.parent !== this) component.parent = this
-      if (this._built) component.build()
     },
     onRemove: (component) => {
       if (component.parent === this) component.parent = undefined
@@ -74,14 +84,14 @@ export abstract class Component implements Identifiable, Destroyable {
   })
 
   private _onParentChanged: Signal<[Component | undefined]> = new Signal()
-  public onParentChanged: OnlyConnectableSignal<[Component | undefined]> = this
+  public onParentChanged: OnlyConnectableSignal<
+    [Component | undefined]
+  > = this
     ._onParentChanged
     .contract()
-  private _onBuild: Signal = new Signal()
-  public onBuild: OnlyConnectableSignal = this._onBuild.contract()
 
   public constructor(settings: ComponentSettings = {}) {
-    this.parent = settings.parent
+    this._parent = settings.parent
     this.id = settings.id ?? crypto.randomUUID()
     this.enabled = new Store(settings.enabled ?? true)
     this.position = new Store(
@@ -120,7 +130,7 @@ export abstract class Component implements Identifiable, Destroyable {
     }
   }
 
-  public get parent(): Component | undefined {
+  public get parent(): Component | ComponentNode | undefined {
     return this._parent
   }
 
@@ -141,11 +151,11 @@ export abstract class Component implements Identifiable, Destroyable {
     return this._built
   }
 
-  public get element(): HTMLElement | undefined {
+  public get element(): ComponentNode | undefined {
     return this._element
   }
 
-  public set element(value: HTMLElement) {
+  public set element(value: ComponentNode) {
     if (this._element === value) return
     this._element = value
   }
@@ -171,36 +181,11 @@ export abstract class Component implements Identifiable, Destroyable {
   public abstract compose(): Generator<Component, void, unknown>
 
   public build(): void {
-    if (this._destroyed) {
-      throw new Error(
-        `Component with id "${this.id}" is destroyed, cannot build`,
-      )
-    }
-
-    if (this._built) {
-      throw new Error(
-        `Component with id ${this.id} is already built, cannot build`,
-      )
-    }
-
-    for (const part of this.compose()) {
-      this.parts.insert(part)
-    }
-
-    for (const behavior of this.behaviors.all()) {
-      behavior.attach()
-    }
-
-    for (const style of this.styles.all()) {
-      style.apply()
-    }
-
-    for (const part of this.parts.all()) {
-      part.build()
-    }
-
-    this._onBuild.fire()
+    if (this._built) return
     this._built = true
+    for (const child of this.compose()) {
+      this.parts.insert(child)
+    }
   }
 
   public dump(
@@ -276,8 +261,8 @@ export abstract class Component implements Identifiable, Destroyable {
     for (const style of this.styles.all()) {
       style.destroy()
     }
-    this.styles.destroy()
 
+    this.styles.destroy()
     this.enabled.destroy()
     this.position.destroy()
     this.rotation.destroy()
@@ -289,7 +274,6 @@ export abstract class Component implements Identifiable, Destroyable {
     this._element = undefined
 
     this._onParentChanged.destroy()
-    this._onBuild.destroy()
 
     this._destroyed = true
   }
